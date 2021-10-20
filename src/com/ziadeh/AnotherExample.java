@@ -25,8 +25,7 @@ public class AnotherExample {
         return timeElapsed;
     }
 
-    @Override
-    public String toString() {
+    public String getName() {
         return "A Cool Object";
     }
 }

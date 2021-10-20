@@ -3,6 +3,7 @@ package com.ziadeh;
 public class ExampleObject {
 
     private int secondsExisted = 0;
+    private AnotherExample anotherExample = new AnotherExample();
 
     public ExampleObject() {
         new Thread(() -> {

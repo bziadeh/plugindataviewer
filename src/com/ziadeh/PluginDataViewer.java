@@ -4,8 +4,9 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
 
 class ExampleMain {
     public static void main(String[] args) {
@@ -13,9 +14,6 @@ class ExampleMain {
 
         ExampleObject myObject = new ExampleObject();
         dataViewer.addObject(myObject);
-
-        AnotherExample anotherExample = new AnotherExample();
-        dataViewer.addObject(anotherExample);
     }
 }
 
@@ -26,7 +24,7 @@ public class PluginDataViewer extends JFrame {
 
     public PluginDataViewer() {
         final Dimension resolution = Toolkit.getDefaultToolkit().getScreenSize();
-        setTitle("Plugin Data Viewer");
+        setTitle("Debug Window");
         setSize(resolution.width / 2, resolution.height / 2);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         JTable table = new JTable(data);
@@ -35,6 +33,21 @@ public class PluginDataViewer extends JFrame {
         add(table);
         setVisible(true);
         updateTable(500);
+    }
+
+    private String getValue(Object objectToTrack, Field field) throws IllegalAccessException, InvocationTargetException {
+        Object obj = field.get(objectToTrack);
+
+        Method[] methods;
+        if((methods = obj.getClass().getDeclaredMethods()).length == 0)
+            return obj.toString();
+
+        for(Method method : methods) {
+            String name = method.getName().toLowerCase();
+            if(name.equals("getname") || name.equals("gettag") || name.equals("name"))
+                return method.invoke(obj).toString();
+        }
+        return obj.toString();
     }
 
     private Object[] createRow(Object object) {
@@ -46,8 +59,8 @@ public class PluginDataViewer extends JFrame {
             field.setAccessible(true);
             final String fieldName = field.getName();
             try {
-                row[i + 1] = fieldName + ": " + field.get(object);
-            } catch (IllegalAccessException e) {
+                row[i + 1] = fieldName + ": " + getValue(object, field);
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
                 return row;
             }
@@ -73,9 +86,8 @@ public class PluginDataViewer extends JFrame {
         }).start();
     }
 
-    public void addObject(Object objectToTrack) {
-        Object[] row = createRow(objectToTrack);
-
+    public void addObject(Object object) {
+        Object[] row = createRow(object);
         if(data.getColumnCount() < row.length)
             data.setColumnCount(row.length);
 
@@ -83,6 +95,13 @@ public class PluginDataViewer extends JFrame {
         data.fireTableDataChanged();
 
         int rowNumber = data.getRowCount() - 1;
-        objectsToTrack.put(objectToTrack, rowNumber);
+        objectsToTrack.put(object, rowNumber);
+    }
+
+    public void removeObject(Object object) {
+        if(!objectsToTrack.containsKey(object))
+            return;
+        data.removeRow(objectsToTrack.remove(object));
+        data.fireTableDataChanged();
     }
 }
